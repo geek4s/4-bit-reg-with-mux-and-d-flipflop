@@ -1,1 +1,77 @@
+`timescale 1ns/1ns
 
+module testbench_register;
+
+// Declare signals
+reg clk = 1'b0;
+reg reset = 1'b1;
+reg [1:0] s = 2'b00;
+reg shift_in_R = 1'b0;
+reg shift_in_L = 1'b0;
+wire [3:0] q;
+
+// Instantiate the Device Under Test (DUT)
+register4bit dut (
+    .clk(clk),
+    .reset(reset),
+    .s(s),
+    .shift_in_R(shift_in_R),
+    .shift_in_L(shift_in_L),
+    .q(q)
+);
+
+// Clock generation
+always #5 clk = ~clk; // Clock period = 10ns
+
+// Test sequence
+initial begin
+    // VCD setup for GTKWave
+    $dumpfile("register4bit.vcd");
+    $dumpvars(0, testbench_register);
+
+    $display("--- Start of Simulation ---");
+    $display("Initial Reset. Time=%0t, Q=%b", $time, q);
+    reset = 1'b1;
+    #10 reset = 1'b0; // Deassert reset
+    $display("After Reset. Time=%0t, Q=%b", $time, q);
+
+    // 1. Initial load via Shift Right
+    $display("\n--- Load Initial Value (1010) via Shift Right (s=10) ---");
+    s = 2'b10;
+    shift_in_R = 1'b0; #10;
+    shift_in_R = 1'b1; #10;
+    shift_in_R = 1'b0; #10;
+    shift_in_R = 1'b1; #10;
+    $display("Initial Load Complete. Time=%0t, Q=%b", $time, q);
+
+    // 2. No Change
+    $display("\n--- No Change (s=00) ---");
+    s = 2'b00;
+    #20;
+    $display("No Change Result. Time=%0t, Q=%b", $time, q);
+
+    // 3. Complement
+    $display("\n--- Complement (s=01) ---");
+    s = 2'b01;
+    #10;
+    $display("Complement Result. Time=%0t, Q=%b", $time, q);
+
+    // 4. Shift Right
+    $display("\n--- Shift Right (s=10), shift_in_R=1 ---");
+    s = 2'b10;
+    shift_in_R = 1'b1;
+    #10;
+    $display("Shift Right Result. Time=%0t, Q=%b", $time, q);
+
+    // 5. Shift Left
+    $display("\n--- Shift Left (s=11), shift_in_L=0 ---");
+    s = 2'b11;
+    shift_in_L = 1'b0;
+    #10;
+    $display("Shift Left Result. Time=%0t, Q=%b", $time, q);
+
+    $display("\n--- End of Simulation ---");
+    $finish;
+end
+
+endmodule
