@@ -28,18 +28,6 @@ The register’s operation depends on two select inputs **s₁s₀**, which dete
 
 ---
 
-## 🧩 Module Description
-
-### 1. `dff.v`
-Implements a **positive-edge triggered D flip-flop** with asynchronous reset.
-
-```verilog
-module dff(input wire clk, input wire rst, input wire d, output reg q);
-    always @(posedge clk or posedge rst)
-        if (rst) q <= 1'b0;
-        else     q <= d;
-endmodule
-
 
 # How To Run
 iverilog -o test_register4bit.vvp testbench_register.v.txt register4bit.v.txt
