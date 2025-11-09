@@ -1,0 +1,128 @@
+// ============================================================
+// 4-bit Register using 4 D Flip-Flops and 4x1 Multiplexers
+// Mode control with s1s0:
+// 00 - No change
+// 01 - Complement output
+// 10 - Shift right
+// 11 - Shift left
+// ============================================================
+
+`timescale 1ns/1ps
+
+module register4bit (
+    input clk,           // clock input
+    input reset,         // asynchronous reset
+    input [1:0] s,       // select lines s1s0
+    input [3:0] data_in, // input data for reset/load
+    output reg [3:0] q   // 4-bit output register
+);
+
+    reg [3:0] d; // next-state values for D flip-flops
+
+    // Multiplexer logic for mode selection
+    always @(*) begin
+        case (s)
+            2'b00: d = q;              // No change
+            2'b01: d = ~q;             // Complement output
+            2'b10: d = {q[0], q[3:1]}; // Shift right
+            2'b11: d = {q[2:0], q[3]}; // Shift left
+            default: d = q;
+        endcase
+    end
+
+    // D Flip-Flops - synchronous update, async reset
+    always @(posedge clk or posedge reset) begin
+        if (reset)
+            q <= data_in; // Load initial data
+        else
+            q <= d;       // Update based on mode
+    end
+
+endmodule
+
+
+// ============================================================
+// TESTBENCH for register4bit
+// Includes ALL test cases: No change, Complement, Shift Right, Shift Left
+// ============================================================
+
+module register4bit_tb;
+
+    reg clk, reset;
+    reg [1:0] s;
+    reg [3:0] data_in;
+    wire [3:0] q;
+
+    // Instantiate DUT (Device Under Test)
+    register4bit uut (
+        .clk(clk),
+        .reset(reset),
+        .s(s),
+        .data_in(data_in),
+        .q(q)
+    );
+
+    // Clock generation: toggle every 5ns
+    always #5 clk = ~clk;
+
+    initial begin
+        // Setup for waveform viewing
+        $dumpfile("register4bit.vcd");
+        $dumpvars(0, register4bit_tb);
+
+        // Initialize signals
+        clk = 0;
+        reset = 1;
+        data_in = 4'b1010;
+        s = 2'b00;
+
+        // Apply reset
+        #10 reset = 0;
+
+        // -------------------------------
+        // TEST 1: No Change (s=00)
+        // -------------------------------
+        $display("\n--- TEST 1: No Change (s=00) ---");
+        s = 2'b00;
+        #10;
+        $display("Time=%0t | Mode=%b | Output=%b", $time, s, q);
+
+        // -------------------------------
+        // TEST 2: Complement Output (s=01)
+        // -------------------------------
+        $display("\n--- TEST 2: Complement (s=01) ---");
+        s = 2'b01;
+        #10;
+        $display("Time=%0t | Mode=%b | Output=%b", $time, s, q);
+
+        // -------------------------------
+        // TEST 3: Shift Right (s=10)
+        // -------------------------------
+        $display("\n--- TEST 3: Shift Right (s=10) ---");
+        s = 2'b10;
+        #10;
+        $display("Time=%0t | Mode=%b | Output=%b", $time, s, q);
+
+        // -------------------------------
+        // TEST 4: Shift Left (s=11)
+        // -------------------------------
+        $display("\n--- TEST 4: Shift Left (s=11) ---");
+        s = 2'b11;
+        #10;
+        $display("Time=%0t | Mode=%b | Output=%b", $time, s, q);
+
+        // -------------------------------
+        // Repeat to observe multiple clock cycles
+        // -------------------------------
+        $display("\n--- TEST 5: Multiple Clock Cycles ---");
+        repeat (4) begin
+            s = 2'b10; // keep shifting right
+            #10;
+            $display("Time=%0t | Mode=%b | Output=%b", $time, s, q);
+        end
+
+        $display("\nSimulation Complete ✅");
+        $finish;
+    end
+
+endmodule
