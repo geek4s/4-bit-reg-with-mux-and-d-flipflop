@@ -1,36 +1,50 @@
-// 4-bit Register with 4x1 MUX control and D Flip-Flops
-// Modes:
-// 00 - No change
-// 01 - Complement
-// 10 - Shift Right
-// 11 - Shift Left
+`include "mux4x1.v.txt"
+`include "d_flipflop.v.txt"
 
+// 4-bit Register with selectable operations using 4x1 MUX and D Flip-Flops
 module register4bit (
-    input clk,          // clock input
-    input reset,        // asynchronous reset
-    input [1:0] s,      // select lines s1s0
-    input [3:0] data_in, // initial data load
-    output reg [3:0] q   // output of register
+    input clk,
+    input reset,
+    input [1:0] s,
+    input shift_in_R,
+    input shift_in_L,
+    output [3:0] q
 );
+    wire [3:0] mux_out;
+    wire [3:0] q_internal;
 
-    reg [3:0] d; // next state inputs for D flip-flops
+    // For each bit, choose input based on s
+    genvar i;
+    generate
+        for (i = 0; i < 4; i = i + 1) begin : reg_logic
+            wire I0, I1, I2, I3;
 
-    always @(*) begin
-        case (s)
-            2'b00: d = q;              // No change
-            2'b01: d = ~q;             // Complement
-            2'b10: d = {q[0], q[3:1]}; // Shift right
-            2'b11: d = {q[2:0], q[3]}; // Shift left
-            default: d = q;
-        endcase
-    end
+            // Select inputs for each operation
+            assign I0 = q_internal[i]; // Hold (no change)
+            assign I1 = ~q_internal[i]; // Complement
+            assign I2 = (i == 3) ? shift_in_R : q_internal[i+1]; // Shift Right
+            assign I3 = (i == 0) ? shift_in_L : q_internal[i-1]; // Shift Left
 
-    // D Flip-Flop logic (on clock edge)
-    always @(posedge clk or posedge reset) begin
-        if (reset)
-            q <= data_in; // Load initial data on reset
-        else
-            q <= d;       // Update based on mode
-    end
+            // 4x1 MUX to select behavior
+            mux4x1 mux_inst (
+                .I0(I0),
+                .I1(I1),
+                .I2(I2),
+                .I3(I3),
+                .S(s),
+                .Y(mux_out[i])
+            );
 
+            // D Flip-Flop for each bit
+            D_FlipFlop dff_inst (
+                .D(mux_out[i]),
+                .CLK(clk),
+                .RST_n(~reset),
+                .Q(q_internal[i]),
+                .Q_n()
+            );
+        end
+    endgenerate
+
+    assign q = q_internal;
 endmodule
