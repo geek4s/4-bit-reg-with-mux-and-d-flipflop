@@ -1,5 +1,5 @@
+//simulation table + gtkwave
 `timescale 1ns/1ns
-
 module testbench_register;
 
 // Declare signals
